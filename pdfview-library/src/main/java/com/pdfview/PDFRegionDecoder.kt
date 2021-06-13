@@ -8,10 +8,9 @@ import android.os.ParcelFileDescriptor
 import androidx.annotation.ColorInt
 import com.pdfview.subsamplincscaleimageview.SubsamplingScaleImageView.SCALE_TYPE_CENTER_INSIDE
 import com.pdfview.subsamplincscaleimageview.decoder.ImageRegionDecoder
-import java.io.File
 
 internal class PDFRegionDecoder(private val view: PDFView,
-                                private val file: File,
+                                private val source: Source,
                                 private val scale: Float,
                                 @param:ColorInt private val backgroundColorPdf: Int = Color.WHITE) : ImageRegionDecoder {
 
@@ -22,7 +21,14 @@ internal class PDFRegionDecoder(private val view: PDFView,
 
     @Throws(Exception::class)
     override fun init(context: Context, uri: Uri): Point {
-        descriptor = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
+        descriptor =
+            when (source) {
+                is Source.FromFile ->
+                    ParcelFileDescriptor.open(source.file, ParcelFileDescriptor.MODE_READ_ONLY)
+
+                is Source.FromUri ->
+                    context.contentResolver.openFileDescriptor(source.uri, "r")!!
+            }
         renderer = PdfRenderer(descriptor)
         val page = renderer.openPage(0)
         pageWidth = (page.width * scale).toInt()
